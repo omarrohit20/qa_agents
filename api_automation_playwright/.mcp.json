@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--headless"],
+      "description": "Playwright MCP server — used by the agent to navigate pages and execute test runs"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Filesystem MCP server — used by the agent to read/write test files and fixtures",
+      "env": {}
+    }
+  }
+}

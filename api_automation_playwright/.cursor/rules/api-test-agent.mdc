@@ -1,0 +1,96 @@
+---
+description: Playwright TypeScript API test agent. Activates when working on spec files, libs wrappers, test_data fixtures, or when asked to add/run API tests. Enforces the project's wrapper-class + template-assertion pattern.
+globs: spec/api/**/*.ts, libs/**/*.ts, test_data/**/*.json, config/hosts.json
+alwaysApply: false
+---
+
+# API Test Automation Agent
+
+Generate and modify Playwright API tests following the exact patterns in this project.
+
+## Project layout
+
+```
+config/hosts.json          ← base URLs per environment (dev/qa)
+libs/<domain>.ts           ← one wrapper class per API domain
+libs/utils/requests.ts     ← HTTP helpers
+libs/utils/assertions.ts   ← verifyResponseTemplate / verifyResponseCode
+libs/utils/common.ts       ← readTestDataJson() / date helpers
+libs/utils/apiTracker.ts   ← debug tracker
+test_data/<domain>/        ← JSON fixtures (request + response template per endpoint)
+spec/api/<domain>.spec.ts  ← tests
+```
+
+## Wrapper class pattern (`libs/<domain>.ts`)
+
+- Constructor accepts optional `APIRequestContext` and optional `baseUrl`
+- If no context: `this.contextReady = this.initContext()` (lazy init)
+- Every method starts with `await this.ensureContext()`
+- `initVariables()` loads all fixtures via `readTestDataJson()` into public properties
+- Re-run `initContext()` after auth to inject the token cookie
+- Base URL read from `config/hosts.json` using `process.env.ENV || 'dev'`
+
+## Test data template rules
+
+Response template files use these validation keywords:
+
+| Keyword | Rule |
+|---------|------|
+| `"skip"` | Ignore field |
+| `"should_not_be_null"` | Must not be null |
+| `"only_chars"` | `/^[a-zA-Z]+$/` |
+| `"only_digits"` | `/^\d+$/` |
+| `"match_regex:/pattern/"` | Custom regex |
+| literal value | Exact equality |
+
+Use `"skip"` for IDs, timestamps, and any server-generated fields.
+
+## Spec file pattern (`spec/api/<domain>.spec.ts`)
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { MyDomain } from '../../libs/my_domain';
+import { verifyResponseCode, verifyResponseIsSuccessful, verifyResponseTemplate } from '../../libs/utils/assertions';
+
+let api: MyDomain;
+
+test.describe('MyDomain API', () => {
+  test.beforeAll(async () => { api = new MyDomain(); });
+
+  test('POST create returns expected shape', async () => {
+    const response = await api.create(api.createRequest);
+    verifyResponseTemplate(response, api.createResponse, 200);
+  });
+
+  test('negative: non-existent returns 404', async () => {
+    const response = await api.getById('nonexistent', false);
+    verifyResponseCode(response, 404);
+  });
+});
+```
+
+## Assertion guide
+
+- Status code only → `verifyResponseCode(response, 200)`
+- Exact body match → `verifyResponse(response, expectedBody, 200)`
+- Body with dynamic fields → `verifyResponseTemplate(response, template, 200)`
+- Negative test → pass `false` to wrapper method, then assert error code
+
+## Adding a new API domain: checklist
+
+1. Add base URL to `config/hosts.json` under every environment key
+2. Create `libs/<domain>.ts` using the wrapper class pattern
+3. Create `test_data/<domain>/` with request + response JSON files
+4. Create `spec/api/<domain>.spec.ts` using the spec pattern
+5. Run: `npx playwright test spec/api/<domain>.spec.ts`
+
+## Run commands
+
+```bash
+npx playwright test                                  # all tests
+npx playwright test spec/api/<domain>.spec.ts        # one file
+npx playwright test --grep "test title"              # one test
+ENV=qa npx playwright test                           # qa environment
+npx playwright test --debug                          # debug mode
+npx playwright show-report                           # open HTML report
+```
