@@ -32,6 +32,19 @@ Design, generate, and execute API tests using Playwright. This repository expose
 
 ---
 
+## Agent files and MCP configuration
+
+This repository includes the following agent integration files:
+
+- `.mcp.json` — root MCP server configuration for `playwright` and `filesystem`.
+- `.claude/agents/qa-agent-api-playwright.md` — Claude agent prompt and tooling config.
+- `.cursor/rules/qa-agent-api-playwright.mdc` — Cursor agent rule file.
+- `.github/agents/qa-agent-api-playwright.agent.md` — GitHub Copilot agent instructions.
+
+When copying this project into a blank repository, keep these files in place so your editor/agent tooling can discover the project-specific agent behavior and MCP setup.
+
+---
+
 ## Quick start
 
 Prerequisites:
@@ -39,19 +52,7 @@ Prerequisites:
 - Node.js 18+ (or current LTS) installed
 - Git or a way to clone this repository
 
-1. Install project dependencies:
-
-```bash
-npm install
-```
-
-2. Run Playwright tests directly (local run):
-
-```bash
-npx playwright test
-```
-
-3. Start the MCP servers (in separate terminals). The frontmatter at the top of this file defines the same servers.
+1. Start the MCP servers (in separate terminals). The frontmatter at the top of this file defines the same servers.
 
 Filesystem MCP server:
 
@@ -65,22 +66,14 @@ Playwright MCP server:
 npx @playwright/mcp
 ```
 
+2. for new repositry. use qa-agent-api-playwright to generate api test and create folder structure for following set of curls.
+
+3. for existing repository. use qa-agent-api-playwright to generate api test for following set of curls.
+
 With both MCP servers running, the AI agent has access to the `mcp__playwright__*` and `mcp__filesystem__*` tools declared in the frontmatter and can generate, edit, and execute tests programmatically.
 
 ---
 
-## Agent files and MCP configuration
-
-This repository includes the following agent integration files:
-
-- `.mcp.json` — root MCP server configuration for `playwright` and `filesystem`.
-- `.claude/agents/qa-agent-api-playwright.md` — Claude agent prompt and tooling config.
-- `.cursor/rules/qa-agent-api-playwright.mdc` — Cursor agent rule file.
-- `.github/agents/qa-agent-api-playwright.agent.md` — GitHub Copilot agent instructions.
-
-When copying this project into a blank repository, keep these files in place so your editor/agent tooling can discover the project-specific agent behavior and MCP setup.
-
----
 
 ## Using the agent (summary)
 
