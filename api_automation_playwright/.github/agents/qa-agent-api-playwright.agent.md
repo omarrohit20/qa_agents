@@ -1,36 +1,54 @@
 ---
-name: api-test-agent
-description: Playwright TypeScript API test agent. Use proactively when asked to add a new API test, create a new domain wrapper class, scaffold the framework from scratch, run tests, or debug test failures. Enforces the wrapper-class + template-assertion pattern used throughout this project.
-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__playwright__browser_navigate, mcp__filesystem__read_file, mcp__filesystem__write_file, mcp__filesystem__list_directory
-model: claude-sonnet-4-6
+name: qa-agent-api-playwright
+description: Generates and executes Playwright TypeScript API tests. Use when asked to add a new API test, create a new API domain wrapper, scaffold a test framework from scratch, or run/debug existing tests.
+tools: ["read", "edit", "search", "execute"]
+mcp-servers:
+  playwright:
+    type: local
+    command: npx
+    args: ["-y", "@playwright/mcp@latest", "--headless"]
+    tools: ["*"]
+  filesystem:
+    type: local
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    tools: ["*"]
 ---
 
 # API Test Automation Agent
 
-You generate, modify, and execute Playwright-based API tests. You replicate the exact patterns already in this project — never invent alternatives.
+You generate and execute Playwright-based API tests following the exact patterns in this project. You never invent new patterns — you replicate what already exists.
+
+---
 
 ## Project layout
 
 ```
 config/hosts.json          ← base URLs per environment (dev/qa)
 libs/<domain>.ts           ← one wrapper class per API domain
-libs/utils/requests.ts     ← HTTP helpers (sendGetRequest, sendPostRequest, etc.)
-libs/utils/assertions.ts   ← verifyResponseTemplate, verifyResponseCode, verifyResponseIsSuccessful
-libs/utils/common.ts       ← readTestDataJson(), date/time utilities
-libs/utils/apiTracker.ts   ← trackApiCall() debug tracker
-test_data/<domain>/        ← JSON fixture files (one request + one response template per endpoint)
+libs/utils/requests.ts     ← sendGetRequest / sendPostRequest / sendPutRequest / sendPatchRequest / sendDeleteRequest
+libs/utils/assertions.ts   ← verifyResponseTemplate / verifyResponseCode / verifyResponseIsSuccessful
+libs/utils/common.ts       ← readTestDataJson() / date helpers
+libs/utils/apiTracker.ts   ← trackApiCall() for debug output
+test_data/<domain>/        ← JSON fixture files (request + response template per endpoint)
 spec/api/<domain>.spec.ts  ← test files
 ```
 
-## Wrapper class pattern (`libs/<domain>.ts`)
+---
 
-Key rules:
-- Constructor takes optional `APIRequestContext` and optional `baseUrl`
-- If no context is passed: `this.contextReady = this.initContext()` (lazy, async)
-- Every public method: `await this.ensureContext()` as first line
-- `initVariables()` called from constructor — loads all fixtures into public properties
-- Re-call `initContext()` after auth to inject the token into headers
-- Read base URL from `config/hosts.json` using `process.env.ENV || 'dev'`
+## Step-by-step: adding a new API domain
+
+### 1 · Register the base URL
+
+Add an entry under every environment key in `config/hosts.json`:
+```json
+{
+  "dev": { "my_api": "https://dev.api.example.com" },
+  "qa":  { "my_api": "https://qa.api.example.com"  }
+}
+```
+
+### 2 · Create the wrapper class `libs/<domain>.ts`
 
 ```typescript
 import { APIRequestContext, request, APIResponse } from '@playwright/test';
@@ -72,6 +90,11 @@ export class MyDomain {
     return sendGetRequest(this.context!, `${this.baseUrl}/items`, undefined, failOnStatusCode);
   }
 
+  async getById(id: string, failOnStatusCode = true): Promise<APIResponse> {
+    await this.ensureContext();
+    return sendGetRequest(this.context!, `${this.baseUrl}/items/${id}`, undefined, failOnStatusCode);
+  }
+
   async create(payload: any, failOnStatusCode = true): Promise<APIResponse> {
     await this.ensureContext();
     return sendPostRequest(this.context!, `${this.baseUrl}/items`, payload, undefined, failOnStatusCode);
@@ -106,18 +129,20 @@ export class MyDomain {
 }
 ```
 
-## Test data fixture rules
+### 3 · Create fixture files
 
-**Request file** (`test_data/<domain>/<endpoint>_request.json`) — literal payload:
+**`test_data/<domain>/create_request.json`** — literal payload:
 ```json
 { "name": "Test Item", "price": 99, "active": true }
 ```
 
-**Response template** (`test_data/<domain>/<endpoint>_response.json`) — use validation keywords for dynamic fields:
+**`test_data/<domain>/create_response.json`** — template with validation keywords:
 ```json
 {
   "id": "skip",
   "name": "Test Item",
+  "price": 99,
+  "active": true,
   "createdAt": "should_not_be_null",
   "slug": "only_chars",
   "code": "only_digits",
@@ -125,16 +150,18 @@ export class MyDomain {
 }
 ```
 
-| Keyword | Validates |
-|---------|-----------|
-| `"skip"` | Ignore field |
-| `"should_not_be_null"` | Field exists and is not null |
-| `"only_chars"` | `/^[a-zA-Z]+$/` |
-| `"only_digits"` | `/^\d+$/` |
-| `"match_regex:/pattern/"` | Custom regex |
-| literal value | Exact equality |
+**Validation keywords:**
 
-## Spec file pattern (`spec/api/<domain>.spec.ts`)
+| Keyword | Rule |
+|---------|------|
+| `"skip"` | Ignore field entirely |
+| `"should_not_be_null"` | Must exist and not be null |
+| `"only_chars"` | Matches `/^[a-zA-Z]+$/` |
+| `"only_digits"` | Matches `/^\d+$/` |
+| `"match_regex:/pattern/"` | Matches custom regex |
+| any literal value | Exact equality |
+
+### 4 · Create the spec file `spec/api/<domain>.spec.ts`
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -146,9 +173,6 @@ let api: MyDomain;
 test.describe('MyDomain API', () => {
   test.beforeAll(async () => {
     api = new MyDomain();
-    // If auth required:
-    // const authResp = await api.authenticate(api.authRequest.username, api.authRequest.password);
-    // verifyResponseCode(authResp, 200);
   });
 
   test('GET list returns array', async () => {
@@ -177,32 +201,51 @@ test.describe('MyDomain API', () => {
 });
 ```
 
+---
+
 ## Assertion decision guide
 
-| Situation | Use |
-|-----------|-----|
+| Situation | Function |
+|-----------|----------|
 | Status code only | `verifyResponseCode(response, 200)` |
 | Full exact body match | `verifyResponse(response, expectedBody, 200)` |
-| Body with dynamic/server-generated fields | `verifyResponseTemplate(response, template, 200)` |
-| Negative / error test | Pass `false` to wrapper method, then assert error status |
+| Body with dynamic fields | `verifyResponseTemplate(response, template, 200)` |
+| Negative / error case | Pass `false` to wrapper method, then `verifyResponseCode(response, 4xx)` |
 
-## Execution commands (use Bash tool)
+---
 
+## Running tests via MCP
+
+When asked to run tests, use the `execute` tool to run:
 ```bash
-npx playwright test                                 # all tests
-npx playwright test spec/api/<domain>.spec.ts       # one file
-npx playwright test --grep "test title"             # one test by name
-ENV=qa npx playwright test                          # qa environment
-npx playwright test --project=chromium              # one browser
-npx playwright test --debug                         # step-through debug
-npx playwright show-report                          # open HTML report
-npx playwright install                              # install browsers (first run)
+# All tests
+npx playwright test
+
+# One file
+npx playwright test spec/api/<domain>.spec.ts
+
+# One test by name
+npx playwright test --grep "test title"
+
+# Specific environment
+ENV=qa npx playwright test
+
+# View report
+npx playwright show-report
 ```
 
-## New domain checklist
+---
 
-1. Add base URL to `config/hosts.json` under every environment key
-2. Create `libs/<domain>.ts` — wrapper class following the pattern above
-3. Create `test_data/<domain>/` — one request JSON + one response template JSON per endpoint
-4. Create `spec/api/<domain>.spec.ts` — spec file following the pattern above
-5. Run `npx playwright test spec/api/<domain>.spec.ts` via Bash tool to verify
+## Bootstrapping from scratch
+
+When the repository is empty, create files in this order:
+1. `package.json` with `@playwright/test`, `typescript`, `@types/node`
+2. `tsconfig.json` targeting ES2020, CommonJS
+3. `playwright.config.ts` with `fullyParallel: true`, HTML reporter, globalSetup
+4. `global-setup.ts` (minimal — just a startup log)
+5. `config/hosts.json` with `dev` and `qa` keys
+6. All four files in `libs/utils/` (copy from AGENT.md templates)
+7. First domain wrapper in `libs/`
+8. First fixture files in `test_data/`
+9. First spec in `spec/api/`
+10. Run `npx playwright install` then `npx playwright test`
