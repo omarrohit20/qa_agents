@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "cypress": {
+      "command": "npx",
+      "args": ["-y", "cypress-mcp", "--cwd", "."],
+      "description": "Cypress MCP server — used by the agent to execute Cypress test runs"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Filesystem MCP server — used by the agent to read/write test files and fixtures",
+      "env": {}
+    }
+  }
+}
