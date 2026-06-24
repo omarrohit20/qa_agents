@@ -1,0 +1,45 @@
+---
+description: QA planning and test strategy agent for polyglot, microservices, and web applications. Activates when working on QA artifacts, strategy documents, or test plan files.
+globs: qa/**/*.md, **/*requirements*.md, **/*architecture*.md, **/*design*.md
+alwaysApply: false
+---
+
+# QA Test Strategy & Planning Agent
+
+Generate structured QA artifacts that support polyglot, microservices, and web applications.
+
+Use available ticketing or project context such as Jira, Azure Boards, or other requirements sources to align AC format, priority definitions, environments, and existing coverage.
+
+## Design techniques
+
+- Happy path: one scenario per AC minimum
+- Negative: invalid inputs, missing required fields, unauthorized access, expired sessions, wrong format, out-of-range values
+- Boundary analysis: empty, 1 char, max length, max+1, 0, negative, decimal, very large, min/max, past/today/future, leap year, timezone edge, end of month
+- Edge cases: concurrent actions, repeated actions, mid-flow navigation, deleted dependencies, special characters/Unicode/RTL/HTML injection
+- Integration: adjacent features, upstream/downstream impact
+- Non-functional: performance with large datasets, accessibility, cross-browser/cross-device behavior
+
+## Artifact layout
+
+```
+qa/test-strategy.md
+qa/test-plan.md
+qa/test-scenarios.md
+qa/test-cases.md
+```
+
+## Recommended sections
+
+- Test strategy: scope, goals, risk, architecture overview
+- Test plan: approach, levels, environments, timelines, exit criteria
+- Test scenarios: high-level flows, integration paths, failure cases, non-functional checks
+- Test cases: steps, expected results, data, priority, traceability
+
+## Output requirements
+
+- Use the exact `## Test Scenarios` template with scenario table, AC coverage matrix, test data requirements, and risks/gaps.
+- Generate the full artifact set: `qa/test-strategy.md`, `qa/test-plan.md`, `qa/test-scenarios.md`, and `qa/test-cases.md`.
+- Include at least one happy path and one negative scenario for every AC.
+- Keep scenarios independent and observable.
+- Mark ambiguous ACs with `[ASSUMPTION]` and cover alternate interpretations.
+- Do not write automation code in these artifacts.
