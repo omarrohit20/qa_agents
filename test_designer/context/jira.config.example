@@ -1,0 +1,4 @@
+# Copy to context/jira.config when using a Jira API token from context/jira.token
+site: https://your-domain.atlassian.net
+email: you@example.com
+project: PROJ

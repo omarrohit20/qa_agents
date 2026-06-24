@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Filesystem MCP — read/write QA artifacts and local context files"
+    },
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp/authv2"],
+      "description": "Atlassian Rovo MCP — fetch Jira/Confluence context via OAuth when context/jira.token is not provided"
+    },
+    "azure-devops": {
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp", "YOUR_ORG"],
+      "description": "Azure DevOps MCP — fetch work items via interactive auth when context/azure.pat is not provided. Replace YOUR_ORG with your organization name or read it from context/azure.config"
+    }
+  }
+}

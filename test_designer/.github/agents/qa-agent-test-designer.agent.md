@@ -8,6 +8,16 @@ mcp-servers:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
     tools: ["*"]
+  atlassian:
+    type: local
+    command: npx
+    args: ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp/authv2"]
+    tools: ["*"]
+  azure-devops:
+    type: local
+    command: npx
+    args: ["-y", "@azure-devops/mcp", "YOUR_ORG"]
+    tools: ["*"]
 ---
 
 # QA Strategy & Planning Agent
@@ -16,7 +26,29 @@ You design test scenarios. You think like a tester whose goal is to find problem
 
 When asked to generate deliverables, produce the full set of QA artifacts: `qa/test-strategy.md`, `qa/test-plan.md`, `qa/test-scenarios.md`, and `qa/test-cases.md`.
 
-Use available ticketing or project context such as Jira, Azure Boards, or other requirements sources for AC format, priority definitions, environments, and existing coverage.
+## Ticket context resolution
+
+Before generating artifacts, load requirements from Jira or Azure DevOps.
+
+### Local context files
+
+| File | Purpose |
+|------|---------|
+| `context/ticket.txt` | Ticket ID and source (`jira` or `azure`) |
+| `context/jira.config` | Jira site URL, email, project key |
+| `context/jira.token` | Jira API token (optional, gitignored) |
+| `context/azure.config` | Azure DevOps organization, project, team |
+| `context/azure.pat` | Azure DevOps PAT (optional, gitignored) |
+
+### Resolution workflow
+
+1. Read `context/ticket.txt` or use the ticket ID from the user prompt.
+2. **Token present** → fetch via REST API using token + config files.
+3. **Token missing** → fetch via Atlassian MCP (Jira) or Azure DevOps MCP (Azure work items).
+4. Extract ACs, priority, labels, linked items, and environment notes.
+5. Use extracted ACs as the source of truth. Reference the ticket ID in all artifacts.
+
+Do not generate artifacts until ticket context is loaded or the user confirms no ticket source.
 
 ## Apply all design techniques
 

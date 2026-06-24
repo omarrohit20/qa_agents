@@ -1,0 +1,7 @@
+# Copy to context/ticket.txt and fill in the ticket you are designing tests for.
+source: jira
+id: PROJ-123
+
+# Azure DevOps example:
+# source: azure
+# id: 12345

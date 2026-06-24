@@ -1,0 +1,4 @@
+# Copy to context/azure.config when using a PAT from context/azure.pat
+organization: your-org
+project: YourProject
+team: Your Team

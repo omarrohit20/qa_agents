@@ -1,0 +1,3 @@
+# Local credentials — never commit tokens
+context/jira.token
+context/azure.pat
